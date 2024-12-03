@@ -1,0 +1,146 @@
+Notebook de Entrenamiento de Modelo de Clasificación
+
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Entrenamiento de Modelo de Clasificación\n",
+    "\n",
+    "## Configuración y Preprocesamiento"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "from sklearn.preprocessing import StandardScaler, LabelEncoder\n",
+    "from sklearn.impute import SimpleImputer\n",
+    "from sklearn.pipeline import Pipeline\n",
+    "from sklearn.compose import ColumnTransformer\n",
+    "from sklearn.feature_selection import SelectKBest, f_classif\n",
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "from sklearn.metrics import classification_report, confusion_matrix\n",
+    "import joblib\n",
+    "\n",
+    "# Cargar datos\n",
+    "datos = pd.read_csv('datos_clasificacion.csv')\n",
+    "\n",
+    "# Identificar características numéricas y categóricas\n",
+    "caracteristicas_numericas = datos.select_dtypes(include=['int64', 'float64']).columns.tolist()\n",
+    "caracteristicas_categoricas = datos.select_dtypes(include=['object']).columns.tolist()\n",
+    "\n",
+    "# Separar características y target\n",
+    "X = datos.drop('target', axis=1)\n",
+    "y = datos['target']"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Preprocesamiento y Reducción de Dimensionalidad"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "source": [
+    "# Preprocesamiento de características\n",
+    "preprocessor = ColumnTransformer(\n",
+    "    transformers=[\n",
+    "        ('num', Pipeline([\n",
+    "            ('imputer', SimpleImputer(strategy='median')),\n",
+    "            ('scaler', StandardScaler()),\n",
+    "            ('selector', SelectKBest(f_classif, k=10))  # Reducción de dimensionalidad\n",
+    "        ]), caracteristicas_numericas),\n",
+    "        ('cat', Pipeline([\n",
+    "            ('imputer', SimpleImputer(strategy='most_frequent')),\n",
+    "            ('encoder', LabelEncoder())\n",
+    "        ]), caracteristicas_categoricas)\n",
+    "    ])\n",
+    "\n",
+    "# División de datos\n",
+    "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Entrenamiento del Modelo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "source": [
+    "# Pipeline de modelo\n",
+    "modelo = Pipeline([\n",
+    "    ('preprocessor', preprocessor),\n",
+    "    ('clasificador', RandomForestClassifier(n_estimators=100, random_state=42))\n",
+    "])\n",
+    "\n",
+    "# Entrenar modelo\n",
+    "modelo.fit(X_train, y_train)\n",
+    "\n",
+    "# Predicciones\n",
+    "predicciones = modelo.predict(X_test)\n",
+    "\n",
+    "# Métricas de rendimiento\n",
+    "reporte_clasificacion = classification_report(y_test, predicciones)\n",
+    "matriz_confusion = confusion_matrix(y_test, predicciones)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Guardar Resultados"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "source": [
+    "# Guardar modelo\n",
+    "joblib.dump(modelo, 'modelo_clasificacion.joblib')\n",
+    "\n",
+    "# Guardar métricas\n",
+    "with open('metricas_modelo.txt', 'w') as f:\n",
+    "    f.write(\"Detalles del Modelo de Clasificación\\n\")\n",
+    "    f.write(f\"Modelo: RandomForestClassifier\\n\")\n",
+    "    f.write(f\"Total de Datos: {len(X)}\\n\")\n",
+    "    f.write(f\"Datos de Entrenamiento: {len(X_train)}\\n\")\n",
+    "    f.write(f\"Datos de Prueba: {len(X_test)}\\n\")\n",
+    "    f.write(\"\\nReporte de Clasificación:\\n\")\n",
+    "    f.write(reporte_clasificacion)\n",
+    "    f.write(\"\\nMatriz de Confusión:\\n\")\n",
+    "    f.write(str(matriz_confusion))\n",
+    "\n",
+    "print(\"Modelo y métricas guardados exitosamente.\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.8.5"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
